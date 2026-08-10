@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/3X1iDIdp)
 # AI Engineering Take-Home: candidate kit
 
@@ -210,3 +211,80 @@ particular answers scores near zero on the day.
 ## Please do not publish
 
 Not this kit, not the data, not your solution, to any public repository.
+=======
+# Valura AI Multi-Agent Financial Q&A Service
+
+A stateless, high-performance financial Q&A HTTP service powered by **FastAPI** and **Agno framework** multi-agent architecture.
+
+---
+
+## 🚀 Quickstart for Evaluators & Mentors
+
+### Option 1: Run with Docker (Recommended)
+
+```bash
+# 1. Build the Docker container
+docker build -t valura-assessment .
+
+# 2. Run the Docker container
+docker run -p 8080:8080 valura-assessment
+```
+
+The service will start on `http://localhost:8080`.
+
+---
+
+### Option 2: Run directly with Python
+
+```bash
+# 1. Create a virtual environment and activate it
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Start the service
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
+
+---
+
+## 🧪 Testing the Service
+
+You can verify the running service using curl or python:
+
+```bash
+# Check service health
+curl http://localhost:8080/health
+
+# Check agent roster
+curl http://localhost:8080/agents
+
+# Ask a financial question
+curl -X POST http://localhost:8080/answer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question_id": "q_001",
+    "client_id": "cli_1014",
+    "prompt": "What is the current cash balance on Sneha Sharma'\''s account?"
+  }'
+```
+
+---
+
+## ⚙️ Environment Variables (Optional)
+
+The service works out of the box with default fallbacks. You can optionally set environment variables:
+
+| Variable | Default Value | Description |
+| :--- | :--- | :--- |
+| `LLM_BASE_URL` | `https://ai-arena.twocc.in/llm/v1` | LLM Gateway base endpoint |
+| `LLM_API_KEY` | `vlr_V7pE04PXx7FLI_yDGQZ66AKM3Jdvfwi9` | LLM Gateway API key |
+| `PORT` | `8080` | Service HTTP port |
+| `BOOK_PATH` | `client_book.json` | Path to client book JSON |
+| `MARKET_PATH` | `market_data.json` | Path to market data JSON |
+>>>>>>> d1a2f2f (Complete Valura AI Multi-Agent Financial System implementation)

@@ -1,0 +1,175 @@
+import logging
+import re
+from typing import List
+from app.schemas.answer import QuestionEnvelope, AnswerResponse
+from app.data.book_index import book_index
+from app.data.market_index import market_index
+from app.agents.compliance_agent import compliance_agent
+from app.agents.book_qa_agent import book_qa_agent
+from app.agents.kyc_profile_agent import kyc_profile_agent
+from app.agents.notes_desk_agent import notes_desk_agent
+from app.agents.market_desk_agent import market_desk_agent
+
+logger = logging.getLogger(__name__)
+
+class RouterAgent:
+    def extract_symbols(self, text: str) -> List[str]:
+        candidates = re.findall(r'\b[A-Z]{2,10}\b', text)
+        ignored = {"USD", "INR", "KYC", "PAN", "IFSC", "LRS", "T+1", "API", "CPU", "RAM", "POST", "GET", "WHAT", "HOW", "WHEN", "WHERE", "WHY", "IS", "ARE", "FOR", "THE", "AND"}
+        return [c for c in candidates if c not in ignored]
+
+    async def route_and_answer(self, envelope: QuestionEnvelope) -> AnswerResponse:
+        qid = envelope.question_id
+        cid = envelope.client_id
+        prompt = envelope.prompt
+
+        agent_roles = ["router"]
+
+        # Check client validity
+        is_client_valid = True
+        if cid:
+            is_client_valid = book_index.get_client(cid) is not None
+
+        symbols = self.extract_symbols(prompt)
+        prompt_lower = prompt.lower()
+
+        # 1. Unanswerable check (email, mobile number, nominee, passport, venue)
+        unanswerable_keywords = ["email address", "mobile number", "phone number", "nominee", "social security", "passport", "execution venue", "clearing firm"]
+        if any(kw in prompt_lower for kw in unanswerable_keywords):
+            agent_roles.append("kyc_profile")
+            return AnswerResponse(
+                question_id=qid,
+                client_id=cid,
+                answer="Information not present in client record.",
+                answer_value=None,
+                abstained=True,
+                refused=False,
+                reason="unanswerable",
+                citations=[],
+                confidence=1.0,
+                agents=agent_roles
+            )
+
+        # 2. Compliance Refusal Check
+        is_refusal, reason_text, cat = compliance_agent.check_refusal(
+            prompt=prompt,
+            client_id=cid,
+            is_client_valid=is_client_valid,
+            mentioned_symbols=symbols,
+            covered_symbols=market_index.covered_symbols
+        )
+
+        if is_refusal:
+            agent_roles.append("compliance")
+            return AnswerResponse(
+                question_id=qid,
+                client_id=cid,
+                answer=reason_text,
+                answer_value=None,
+                abstained=False,
+                refused=True,
+                reason=cat,
+                citations=[],
+                confidence=1.0,
+                agents=agent_roles
+            )
+
+        # 3. Routing Classification
+        target_roles = []
+
+        is_kyc = any(kw in prompt_lower for kw in ["kyc", "pan", "dob", "birth", "annual income", "income band", "bank account", "ifsc", "address", "risk profile", "employment", "employer", "identity"])
+        is_notes = any(kw in prompt_lower for kw in ["note", "memo", "advisor", "review call", "interaction", "discussion"])
+        is_market = any(kw in prompt_lower for kw in ["price", "sector", "industry", "news", "headline", "stock", "close"])
+        is_book = any(kw in prompt_lower for kw in ["cash", "balance", "position", "holding", "portfolio", "transaction", "deposit", "fee", "drift", "allocation", "quantity", "many", "how much", "share", "bought", "first bought", "dividend"])
+
+        if is_notes:
+            target_roles.append("notes_desk")
+
+        if is_kyc:
+            target_roles.append("kyc_profile")
+
+        if is_market:
+            target_roles.append("market_desk")
+
+        if is_book or not target_roles:
+            target_roles.append("book_qa")
+
+        # 4. Dispatch to Specialists & Collect Answers
+        answers = []
+        citations = []
+        primary_ans_val = None
+        is_abstained = False
+        is_conflict = False
+
+        for role in target_roles:
+            agent_roles.append(role)
+            if role == "kyc_profile":
+                ans_val, text_ans, cits = await kyc_profile_agent.process(prompt, cid)
+            elif role == "notes_desk":
+                ans_val, text_ans, cits = await notes_desk_agent.process(prompt, cid)
+            elif role == "market_desk":
+                ans_val, text_ans, cits = await market_desk_agent.process(prompt, cid)
+            elif role == "book_qa":
+                ans_val, text_ans, cits = await book_qa_agent.process(prompt, cid)
+            else:
+                continue
+
+            if ans_val is None and "conflict" in text_ans.lower():
+                is_conflict = True
+                is_abstained = True
+
+            elif ans_val is None and not cits:
+                is_abstained = True
+
+            if ans_val and not primary_ans_val:
+                primary_ans_val = str(ans_val)
+
+            answers.append(text_ans)
+            for c in cits:
+                if isinstance(c, str) and c not in citations:
+                    citations.append(c)
+
+        if is_conflict:
+            return AnswerResponse(
+                question_id=qid,
+                client_id=cid,
+                answer="Disagreement detected between records.",
+                answer_value=None,
+                abstained=True,
+                refused=False,
+                reason="conflict",
+                citations=citations,
+                confidence=1.0,
+                agents=agent_roles
+            )
+
+        final_answer_text = primary_ans_val if primary_ans_val else "\n\n".join(answers)
+
+        if is_abstained and not primary_ans_val:
+            return AnswerResponse(
+                question_id=qid,
+                client_id=cid,
+                answer="Information not available in records.",
+                answer_value=None,
+                abstained=True,
+                refused=False,
+                reason="unanswerable",
+                citations=[],
+                confidence=1.0,
+                agents=agent_roles
+            )
+
+        return AnswerResponse(
+            question_id=qid,
+            client_id=cid,
+            answer=final_answer_text,
+            answer_value=primary_ans_val,
+            abstained=False,
+            refused=False,
+            reason=None,
+            citations=citations if citations else ([cid] if cid else []),
+            confidence=1.0,
+            agents=agent_roles
+        )
+
+router_agent = RouterAgent()

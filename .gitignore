@@ -1,8 +1,21 @@
 __pycache__/
 *.pyc
+<<<<<<< HEAD
 runs/
 .env
 .venv/
 venv/
 node_modules/
 .DS_Store
+=======
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+env/
+.env
+.DS_Store
+.idea/
+.vscode/
+>>>>>>> d1a2f2f (Complete Valura AI Multi-Agent Financial System implementation)
