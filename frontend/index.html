@@ -1,0 +1,1812 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valura AI — Multi-Agent Financial Intelligence</title>
+    <meta name="description" content="Premium multi-agent financial Q&A dashboard powered by Agno framework">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* ========================================
+           DESIGN SYSTEM — CSS VARIABLES
+           ======================================== */
+        :root {
+            --bg-primary: #06081a;
+            --bg-secondary: #0d1033;
+            --bg-card: rgba(13, 16, 51, 0.65);
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --bg-glass-hover: rgba(255, 255, 255, 0.07);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(0, 212, 255, 0.3);
+            --text-primary: #e8eaf6;
+            --text-secondary: #8b8fad;
+            --text-muted: #5c5f7e;
+            --accent-blue: #00d4ff;
+            --accent-emerald: #00e676;
+            --accent-amber: #ffab00;
+            --accent-rose: #ff3d71;
+            --accent-purple: #b388ff;
+            --accent-teal: #00bfa5;
+            --gradient-blue: linear-gradient(135deg, #00d4ff, #0066ff);
+            --gradient-emerald: linear-gradient(135deg, #00e676, #00bfa5);
+            --gradient-amber: linear-gradient(135deg, #ffab00, #ff6d00);
+            --gradient-rose: linear-gradient(135deg, #ff3d71, #d50000);
+            --gradient-purple: linear-gradient(135deg, #b388ff, #7c4dff);
+            --shadow-glow: 0 0 30px rgba(0, 212, 255, 0.1);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --font-body: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ========================================
+           RESET & BASE
+           ======================================== */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 15px;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(0, 212, 255, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 80% 80%, rgba(179, 136, 255, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 50% 50%, rgba(0, 230, 118, 0.02) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            width: 2px; height: 2px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleFloat linear infinite;
+        }
+        @keyframes particleFloat {
+            0% { opacity: 0; transform: translateY(100vh) scale(0); }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+        }
+
+        /* ========================================
+           SCROLLBAR
+           ======================================== */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* ========================================
+           LAYOUT
+           ======================================== */
+        .app-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ========================================
+           HEADER
+           ======================================== */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 16px 0;
+            backdrop-filter: blur(20px) saturate(1.2);
+            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 32px;
+        }
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .logo-icon {
+            width: 42px; height: 42px;
+            background: var(--gradient-blue);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(0, 212, 255, 0.5); }
+        }
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: var(--gradient-blue);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+        .logo-text span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .health-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 50px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: default;
+            transition: var(--transition-fast);
+        }
+        .health-pill.online {
+            border-color: rgba(0, 230, 118, 0.3);
+            color: var(--accent-emerald);
+        }
+        .health-pill.offline {
+            border-color: rgba(255, 61, 113, 0.3);
+            color: var(--accent-rose);
+        }
+        .health-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent-emerald);
+            animation: dotPulse 2s ease-in-out infinite;
+        }
+        .health-pill.offline .health-dot {
+            background: var(--accent-rose);
+            animation: none;
+        }
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        .nav-links {
+            display: flex;
+            gap: 4px;
+        }
+        .nav-link {
+            padding: 8px 14px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-family: var(--font-body);
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-primary);
+            background: var(--bg-glass-hover);
+        }
+        .nav-link.active {
+            color: var(--accent-blue);
+        }
+
+        /* ========================================
+           SECTION TITLES
+           ======================================== */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .section-icon {
+            width: 36px; height: 36px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .section-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* ========================================
+           GLASS CARD
+           ======================================== */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            transition: var(--transition-smooth);
+        }
+        .glass-card:hover {
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+        }
+
+        /* ========================================
+           SECTIONS
+           ======================================== */
+        .section {
+            margin-bottom: 40px;
+            animation: sectionFadeIn 0.6s ease-out both;
+        }
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.2s; }
+        .section:nth-child(4) { animation-delay: 0.3s; }
+        .section:nth-child(5) { animation-delay: 0.4s; }
+        @keyframes sectionFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========================================
+           AGENT ROSTER
+           ======================================== */
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .agent-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            cursor: default;
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            opacity: 0;
+            transition: var(--transition-smooth);
+        }
+        .agent-card:hover::before { opacity: 1; }
+        .agent-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+        }
+        .agent-card[data-role="router"]::before { background: var(--gradient-blue); }
+        .agent-card[data-role="book_qa"]::before { background: var(--gradient-emerald); }
+        .agent-card[data-role="kyc_profile"]::before { background: var(--gradient-amber); }
+        .agent-card[data-role="notes_desk"]::before { background: var(--gradient-purple); }
+        .agent-card[data-role="market_desk"]::before { background: var(--gradient-blue); }
+        .agent-card[data-role="compliance"]::before { background: var(--gradient-rose); }
+
+        .agent-card[data-role="router"]:hover { box-shadow: 0 0 30px rgba(0,212,255,0.15); }
+        .agent-card[data-role="book_qa"]:hover { box-shadow: 0 0 30px rgba(0,230,118,0.15); }
+        .agent-card[data-role="kyc_profile"]:hover { box-shadow: 0 0 30px rgba(255,171,0,0.15); }
+        .agent-card[data-role="notes_desk"]:hover { box-shadow: 0 0 30px rgba(179,136,255,0.15); }
+        .agent-card[data-role="market_desk"]:hover { box-shadow: 0 0 30px rgba(0,212,255,0.15); }
+        .agent-card[data-role="compliance"]:hover { box-shadow: 0 0 30px rgba(255,61,113,0.15); }
+
+        .agent-role-icon {
+            width: 40px; height: 40px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-bottom: 14px;
+        }
+        .agent-card[data-role="router"] .agent-role-icon { background: rgba(0,212,255,0.12); }
+        .agent-card[data-role="book_qa"] .agent-role-icon { background: rgba(0,230,118,0.12); }
+        .agent-card[data-role="kyc_profile"] .agent-role-icon { background: rgba(255,171,0,0.12); }
+        .agent-card[data-role="notes_desk"] .agent-role-icon { background: rgba(179,136,255,0.12); }
+        .agent-card[data-role="market_desk"] .agent-role-icon { background: rgba(0,191,165,0.12); }
+        .agent-card[data-role="compliance"] .agent-role-icon { background: rgba(255,61,113,0.12); }
+
+        .agent-name {
+            font-size: 0.92rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .agent-role-badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .agent-card[data-role="router"] .agent-role-badge { background: rgba(0,212,255,0.12); color: var(--accent-blue); }
+        .agent-card[data-role="book_qa"] .agent-role-badge { background: rgba(0,230,118,0.12); color: var(--accent-emerald); }
+        .agent-card[data-role="kyc_profile"] .agent-role-badge { background: rgba(255,171,0,0.12); color: var(--accent-amber); }
+        .agent-card[data-role="notes_desk"] .agent-role-badge { background: rgba(179,136,255,0.12); color: var(--accent-purple); }
+        .agent-card[data-role="market_desk"] .agent-role-badge { background: rgba(0,191,165,0.12); color: var(--accent-teal); }
+        .agent-card[data-role="compliance"] .agent-role-badge { background: rgba(255,61,113,0.12); color: var(--accent-rose); }
+
+        .agent-desc {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ========================================
+           Q&A CONSOLE
+           ======================================== */
+        .qa-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 1024px) {
+            .qa-section { grid-template-columns: 1fr; }
+        }
+        .qa-input-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .input-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .input-field {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            outline: none;
+            transition: var(--transition-fast);
+        }
+        .input-field:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+        }
+        .input-field::placeholder { color: var(--text-muted); }
+
+        select.input-field {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8fad' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+        select.input-field option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        textarea.input-field {
+            min-height: 120px;
+            resize: vertical;
+            font-family: var(--font-body);
+        }
+
+        .ask-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 28px;
+            background: var(--gradient-blue);
+            border: none;
+            border-radius: var(--radius-md);
+            color: white;
+            font-family: var(--font-body);
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+        .ask-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,212,255,0.3);
+        }
+        .ask-btn:active { transform: translateY(0); }
+        .ask-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .ask-btn .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: none;
+        }
+        .ask-btn.loading .spinner { display: block; }
+        .ask-btn.loading .btn-text { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .sample-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+        .sample-q {
+            padding: 5px 12px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 50px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-family: var(--font-body);
+            white-space: nowrap;
+        }
+        .sample-q:hover {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+            background: rgba(0,212,255,0.05);
+        }
+
+        /* Response Panel */
+        .response-panel {
+            position: relative;
+        }
+        .response-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 300px;
+            text-align: center;
+            gap: 16px;
+        }
+        .placeholder-icon {
+            font-size: 48px;
+            opacity: 0.15;
+        }
+        .placeholder-text {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+
+        .response-content { display: none; }
+        .response-content.visible { display: block; }
+
+        .answer-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .answer-status {
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .answer-status.answered { background: rgba(0,230,118,0.12); color: var(--accent-emerald); }
+        .answer-status.abstained { background: rgba(255,171,0,0.12); color: var(--accent-amber); }
+        .answer-status.refused { background: rgba(255,61,113,0.12); color: var(--accent-rose); }
+
+        .confidence-meter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .confidence-bar {
+            width: 80px;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .confidence-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease-out;
+        }
+
+        .answer-value-box {
+            background: rgba(0,212,255,0.06);
+            border: 1px solid rgba(0,212,255,0.15);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .answer-value-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .answer-value-text {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .answer-text {
+            font-size: 0.88rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            padding: 14px;
+            background: var(--bg-glass);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        /* Agent Pipeline Visualization */
+        .pipeline-section {
+            margin-bottom: 16px;
+        }
+        .pipeline-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            flex-wrap: wrap;
+        }
+        .pipeline-node {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 600;
+            animation: nodeAppear 0.4s ease-out both;
+        }
+        .pipeline-node:nth-child(2) { animation-delay: 0.15s; }
+        .pipeline-node:nth-child(3) { animation-delay: 0.3s; }
+        .pipeline-node:nth-child(4) { animation-delay: 0.45s; }
+        .pipeline-node:nth-child(5) { animation-delay: 0.6s; }
+        @keyframes nodeAppear {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .pipeline-arrow {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0 4px;
+            animation: nodeAppear 0.3s ease-out both;
+        }
+
+        .citations-section {
+            margin-top: 12px;
+        }
+        .citation-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin: 2px 4px 2px 0;
+        }
+        .flags-section {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .flag-badge {
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 600;
+        }
+        .flag-badge.conflict { background: rgba(255,61,113,0.12); color: var(--accent-rose); }
+        .flag-badge.upstream_issue { background: rgba(255,171,0,0.12); color: var(--accent-amber); }
+        .flag-badge.stale_data { background: rgba(179,136,255,0.12); color: var(--accent-purple); }
+
+        /* ========================================
+           MARKET DATA
+           ======================================== */
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+        }
+        .market-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            transition: var(--transition-smooth);
+            cursor: default;
+        }
+        .market-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-glow);
+        }
+        .market-symbol {
+            font-family: var(--font-mono);
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .market-sector {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .market-price {
+            font-family: var(--font-mono);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .market-change {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .market-change.positive { color: var(--accent-emerald); }
+        .market-change.negative { color: var(--accent-rose); }
+        .sparkline-container {
+            height: 40px;
+            margin-top: 10px;
+        }
+        .sparkline-container canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* News Feed */
+        .news-section {
+            margin-top: 24px;
+        }
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .news-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            transition: var(--transition-fast);
+        }
+        .news-card:hover { border-color: var(--border-glow); }
+        .news-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .news-symbol-tag {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            background: rgba(0,212,255,0.1);
+            color: var(--accent-blue);
+            border-radius: 4px;
+        }
+        .news-date {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        .news-headline {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        .news-body {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ========================================
+           CLIENT EXPLORER
+           ======================================== */
+        .client-explorer {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .client-explorer { grid-template-columns: 1fr; }
+        }
+        .client-list-panel {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .client-search {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .client-item {
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 2px;
+        }
+        .client-item:hover { background: var(--bg-glass-hover); }
+        .client-item.active {
+            background: rgba(0,212,255,0.08);
+            border-left: 3px solid var(--accent-blue);
+        }
+        .client-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.72rem;
+            flex-shrink: 0;
+        }
+        .client-item-info h4 {
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+        .client-item-info span {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        .client-detail-panel {
+            min-height: 300px;
+        }
+        .client-detail-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 300px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        @media (max-width: 700px) {
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+        .detail-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+        }
+        .detail-card-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-key {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .detail-val {
+            font-size: 0.78rem;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+        }
+
+        .positions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .positions-table th {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .positions-table td {
+            font-size: 0.78rem;
+            padding: 8px 10px;
+            font-family: var(--font-mono);
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+
+        /* ========================================
+           ACTIVITY LOG
+           ======================================== */
+        .log-container {
+            background: rgba(6, 8, 26, 0.8);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            max-height: 280px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            padding: 4px 0;
+        }
+        .log-entry {
+            padding: 6px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+            animation: logSlideIn 0.3s ease-out;
+        }
+        @keyframes logSlideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .log-time {
+            color: var(--text-muted);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .log-type {
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .log-type.req { background: rgba(0,212,255,0.12); color: var(--accent-blue); }
+        .log-type.res { background: rgba(0,230,118,0.12); color: var(--accent-emerald); }
+        .log-type.err { background: rgba(255,61,113,0.12); color: var(--accent-rose); }
+        .log-type.info { background: rgba(179,136,255,0.12); color: var(--accent-purple); }
+        .log-msg {
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        /* ========================================
+           STATS BAR
+           ======================================== */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 18px 20px;
+            transition: var(--transition-fast);
+        }
+        .stat-card:hover { border-color: var(--border-glow); }
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 1.6rem;
+            font-weight: 800;
+        }
+        .stat-value.blue { color: var(--accent-blue); }
+        .stat-value.emerald { color: var(--accent-emerald); }
+        .stat-value.amber { color: var(--accent-amber); }
+        .stat-value.purple { color: var(--accent-purple); }
+
+        /* ========================================
+           FOOTER
+           ======================================== */
+        .footer {
+            text-align: center;
+            padding: 32px 0;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            border-top: 1px solid var(--border-glass);
+            margin-top: 40px;
+        }
+        .footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        /* ========================================
+           TAB SYSTEM
+           ======================================== */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Reason badge */
+        .reason-badge {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            padding: 2px 10px;
+            background: var(--bg-glass);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-glass);
+        }
+
+        .response-time-badge {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Particles Background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo-section">
+                <div class="logo-icon">V</div>
+                <div class="logo-text">
+                    <h1>Valura AI</h1>
+                    <span>Multi-Agent Intelligence</span>
+                </div>
+            </div>
+            <nav class="nav-links">
+                <button class="nav-link active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+                <button class="nav-link" data-tab="qa" onclick="switchTab('qa')">Q&A Console</button>
+                <button class="nav-link" data-tab="market" onclick="switchTab('market')">Market Data</button>
+                <button class="nav-link" data-tab="clients" onclick="switchTab('clients')">Clients</button>
+            </nav>
+            <div class="header-controls">
+                <div class="health-pill offline" id="healthPill">
+                    <div class="health-dot"></div>
+                    <span id="healthText">Connecting…</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-wrapper">
+
+        <!-- ========== DASHBOARD TAB ========== -->
+        <div class="tab-content active" id="tab-dashboard">
+
+            <!-- Stats Bar -->
+            <div class="stats-bar" id="statsBar">
+                <div class="stat-card">
+                    <div class="stat-label">Agents Online</div>
+                    <div class="stat-value blue" id="statAgents">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Questions Answered</div>
+                    <div class="stat-value emerald" id="statQuestions">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Covered Instruments</div>
+                    <div class="stat-value amber" id="statInstruments">—</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Clients</div>
+                    <div class="stat-value purple" id="statClients">—</div>
+                </div>
+            </div>
+
+            <!-- Agent Roster -->
+            <section class="section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: rgba(0,212,255,0.1);">🤖</div>
+                    <div>
+                        <h2 class="section-title">Agent Roster</h2>
+                        <p class="section-subtitle">Active specialized agents in the multi-agent pipeline</p>
+                    </div>
+                </div>
+                <div class="agent-grid" id="agentGrid">
+                    <div style="color: var(--text-muted); font-size: 0.85rem;">Loading agents…</div>
+                </div>
+            </section>
+
+            <!-- Activity Log -->
+            <section class="section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: rgba(179,136,255,0.1);">📟</div>
+                    <div>
+                        <h2 class="section-title">Activity Log</h2>
+                        <p class="section-subtitle">Real-time request and response stream</p>
+                    </div>
+                </div>
+                <div class="log-container" id="activityLog">
+                    <div class="log-entry">
+                        <span class="log-time">--:--:--</span>
+                        <span class="log-type info">SYS</span>
+                        <span class="log-msg">Initializing Valura AI Dashboard…</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========== Q&A CONSOLE TAB ========== -->
+        <div class="tab-content" id="tab-qa">
+            <section class="section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: rgba(0,230,118,0.1);">💬</div>
+                    <div>
+                        <h2 class="section-title">Q&A Console</h2>
+                        <p class="section-subtitle">Ask financial questions routed through the multi-agent pipeline</p>
+                    </div>
+                </div>
+                <div class="qa-section">
+                    <!-- Input Panel -->
+                    <div class="glass-card qa-input-panel">
+                        <div class="input-group">
+                            <label class="input-label" for="clientSelect">Client</label>
+                            <select class="input-field" id="clientSelect">
+                                <option value="">Select a client…</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label" for="questionInput">Question</label>
+                            <textarea class="input-field" id="questionInput" placeholder="e.g. What is the current cash balance on this account?"></textarea>
+                        </div>
+                        <div>
+                            <div class="input-label" style="margin-bottom: 8px;">Try These</div>
+                            <div class="sample-questions">
+                                <button class="sample-q" onclick="fillQuestion('cli_1014', 'What is the current cash balance on Sneha Sharma\\'s account?')">💰 Cash balance</button>
+                                <button class="sample-q" onclick="fillQuestion('cli_1003', 'Who is Pooja Banerjee\\'s employer according to the KYC record?')">👤 KYC employer</button>
+                                <button class="sample-q" onclick="fillQuestion('cli_1014', 'How many AAPL shares does Sneha Sharma currently hold?')">📊 AAPL holdings</button>
+                                <button class="sample-q" onclick="fillQuestion('cli_1010', 'What is Shreya Reddy\\'s risk profile on file?')">⚠️ Risk profile</button>
+                                <button class="sample-q" onclick="fillQuestion('cli_1012', 'What is Pooja Kapoor\\'s email address?')">📧 Email (PII)</button>
+                                <button class="sample-q" onclick="fillQuestion('cli_1024', 'What is the latest close price for AAPL?')">📈 AAPL price</button>
+                            </div>
+                        </div>
+                        <button class="ask-btn" id="askBtn" onclick="submitQuestion()">
+                            <span class="btn-text">⚡ Ask the Agents</span>
+                            <div class="spinner"></div>
+                        </button>
+                    </div>
+
+                    <!-- Response Panel -->
+                    <div class="glass-card response-panel">
+                        <div class="response-placeholder" id="responsePlaceholder">
+                            <div class="placeholder-icon">🧠</div>
+                            <div class="placeholder-text">Ask a question to see the multi-agent response</div>
+                        </div>
+                        <div class="response-content" id="responseContent">
+                            <div class="answer-header" id="answerHeader"></div>
+                            <div id="answerValueBox"></div>
+                            <div class="answer-text" id="answerText"></div>
+                            <div class="pipeline-section">
+                                <div class="pipeline-label">Agent Routing Pipeline</div>
+                                <div class="pipeline" id="pipelineViz"></div>
+                            </div>
+                            <div class="citations-section" id="citationsSection"></div>
+                            <div class="flags-section" id="flagsSection"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========== MARKET DATA TAB ========== -->
+        <div class="tab-content" id="tab-market">
+            <section class="section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: rgba(255,171,0,0.1);">📈</div>
+                    <div>
+                        <h2 class="section-title">Market Data</h2>
+                        <p class="section-subtitle">Covered instruments with monthly close prices and news</p>
+                    </div>
+                </div>
+                <div class="market-grid" id="marketGrid">
+                    <div style="color: var(--text-muted); font-size: 0.85rem;">Loading market data…</div>
+                </div>
+            </section>
+
+            <section class="section news-section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: rgba(0,191,165,0.1);">📰</div>
+                    <div>
+                        <h2 class="section-title">News Feed</h2>
+                        <p class="section-subtitle">Latest headlines from the covered universe</p>
+                    </div>
+                </div>
+                <div class="news-grid" id="newsGrid">
+                    <div style="color: var(--text-muted); font-size: 0.85rem;">Loading news…</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========== CLIENTS TAB ========== -->
+        <div class="tab-content" id="tab-clients">
+            <section class="section">
+                <div class="section-header">
+                    <div class="section-icon" style="background: rgba(179,136,255,0.1);">👥</div>
+                    <div>
+                        <h2 class="section-title">Client Book Explorer</h2>
+                        <p class="section-subtitle">Browse client profiles, KYC records, positions, and transactions</p>
+                    </div>
+                </div>
+                <div class="client-explorer">
+                    <div class="glass-card client-list-panel">
+                        <input type="text" class="input-field client-search" id="clientSearch" placeholder="🔍 Search clients…" oninput="filterClients()">
+                        <div id="clientList">
+                            <div style="color: var(--text-muted); font-size: 0.85rem; padding: 16px;">Loading clients…</div>
+                        </div>
+                    </div>
+                    <div class="glass-card client-detail-panel" id="clientDetailPanel">
+                        <div class="client-detail-placeholder">
+                            <div style="font-size: 40px; margin-bottom: 12px; opacity: 0.15;">👤</div>
+                            Select a client to view details
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Valura AI Multi-Agent Financial Q&A Service — Powered by <strong>Agno Framework</strong> &amp; <strong>FastAPI</strong></p>
+        <p style="margin-top: 4px;">Built by Ayush Yele · Synthetic Data Only</p>
+    </footer>
+
+    <script>
+        /* ========================================
+           GLOBAL STATE
+           ======================================== */
+        let questionsAnswered = 0;
+        let allClients = [];
+        let allMarketData = null;
+        let questionCounter = 100;
+
+        const ROLE_ICONS = {
+            router: '🔀', book_qa: '📒', kyc_profile: '🪪',
+            notes_desk: '📝', market_desk: '📊', compliance: '🛡️', verifier: '✅'
+        };
+        const ROLE_COLORS = {
+            router: '#00d4ff', book_qa: '#00e676', kyc_profile: '#ffab00',
+            notes_desk: '#b388ff', market_desk: '#00bfa5', compliance: '#ff3d71', verifier: '#00d4ff'
+        };
+        const AVATAR_COLORS = [
+            'linear-gradient(135deg, #00d4ff, #0066ff)',
+            'linear-gradient(135deg, #00e676, #00bfa5)',
+            'linear-gradient(135deg, #ffab00, #ff6d00)',
+            'linear-gradient(135deg, #b388ff, #7c4dff)',
+            'linear-gradient(135deg, #ff3d71, #d50000)',
+            'linear-gradient(135deg, #00bfa5, #00d4ff)',
+        ];
+
+        /* ========================================
+           PARTICLES
+           ======================================== */
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (8 + Math.random() * 15) + 's';
+                p.style.animationDelay = Math.random() * 10 + 's';
+                p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+                const colors = ['#00d4ff', '#00e676', '#b388ff', '#ffab00'];
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                container.appendChild(p);
+            }
+        }
+
+        /* ========================================
+           TAB SWITCHING
+           ======================================== */
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            document.querySelector(`.nav-link[data-tab="${tabName}"]`).classList.add('active');
+        }
+
+        /* ========================================
+           ACTIVITY LOG
+           ======================================== */
+        function addLog(type, msg) {
+            const log = document.getElementById('activityLog');
+            const now = new Date();
+            const time = now.toTimeString().split(' ')[0];
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-type ${type}">${type.toUpperCase()}</span>
+                <span class="log-msg">${msg}</span>
+            `;
+            log.insertBefore(entry, log.firstChild);
+            // Keep max 50 entries
+            while (log.children.length > 50) log.removeChild(log.lastChild);
+        }
+
+        /* ========================================
+           HEALTH CHECK
+           ======================================== */
+        async function checkHealth() {
+            const pill = document.getElementById('healthPill');
+            const text = document.getElementById('healthText');
+            try {
+                const res = await fetch('/health');
+                if (res.ok) {
+                    pill.className = 'health-pill online';
+                    text.textContent = 'Online';
+                } else {
+                    pill.className = 'health-pill offline';
+                    text.textContent = 'Error';
+                }
+            } catch {
+                pill.className = 'health-pill offline';
+                text.textContent = 'Offline';
+            }
+        }
+
+        /* ========================================
+           LOAD AGENTS
+           ======================================== */
+        async function loadAgents() {
+            try {
+                const res = await fetch('/agents');
+                const data = await res.json();
+                const agents = data.agents || [];
+                document.getElementById('statAgents').textContent = agents.length;
+
+                const grid = document.getElementById('agentGrid');
+                grid.innerHTML = agents.map(a => `
+                    <div class="agent-card" data-role="${a.role}">
+                        <div class="agent-role-icon">${ROLE_ICONS[a.role] || '🤖'}</div>
+                        <div class="agent-name">${a.name}</div>
+                        <div class="agent-role-badge">${a.role}</div>
+                        <div class="agent-desc">${a.description}</div>
+                    </div>
+                `).join('');
+                addLog('info', `Loaded ${agents.length} agents: ${agents.map(a=>a.role).join(', ')}`);
+            } catch (e) {
+                addLog('err', 'Failed to load agents: ' + e.message);
+            }
+        }
+
+        /* ========================================
+           LOAD CLIENTS
+           ======================================== */
+        async function loadClients() {
+            try {
+                const res = await fetch('/api/clients');
+                allClients = await res.json();
+                document.getElementById('statClients').textContent = allClients.length;
+
+                // Populate QA selector
+                const sel = document.getElementById('clientSelect');
+                allClients.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `${c.name} (${c.id})`;
+                    sel.appendChild(opt);
+                });
+
+                // Populate client list
+                renderClientList(allClients);
+                addLog('info', `Loaded ${allClients.length} client profiles`);
+            } catch (e) {
+                addLog('err', 'Failed to load clients: ' + e.message);
+            }
+        }
+
+        function renderClientList(clients) {
+            const list = document.getElementById('clientList');
+            list.innerHTML = clients.map((c, i) => `
+                <div class="client-item" data-id="${c.id}" onclick="selectClient('${c.id}')">
+                    <div class="client-avatar" style="background: ${AVATAR_COLORS[i % AVATAR_COLORS.length]}; color: white;">
+                        ${c.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
+                    </div>
+                    <div class="client-item-info">
+                        <h4>${c.name}</h4>
+                        <span>${c.id}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterClients() {
+            const q = document.getElementById('clientSearch').value.toLowerCase();
+            const filtered = allClients.filter(c =>
+                c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)
+            );
+            renderClientList(filtered);
+        }
+
+        /* ========================================
+           SELECT CLIENT (DETAIL VIEW)
+           ======================================== */
+        async function selectClient(clientId) {
+            document.querySelectorAll('.client-item').forEach(el => el.classList.remove('active'));
+            const active = document.querySelector(`.client-item[data-id="${clientId}"]`);
+            if (active) active.classList.add('active');
+
+            try {
+                const res = await fetch(`/api/client/${clientId}`);
+                const c = await res.json();
+                const panel = document.getElementById('clientDetailPanel');
+
+                const maskPAN = (pan) => pan ? '****' + pan.slice(-4) : '—';
+                const maskAcct = (acct) => acct ? '****' + acct.slice(-4) : '—';
+
+                let positionsHTML = '';
+                if (c.positions_snapshot && c.positions_snapshot.length) {
+                    positionsHTML = `
+                        <div class="detail-card" style="grid-column: 1 / -1;">
+                            <div class="detail-card-title">📊 Positions Snapshot</div>
+                            <table class="positions-table">
+                                <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Cost</th><th>Market Value</th></tr></thead>
+                                <tbody>${c.positions_snapshot.map(p => `
+                                    <tr>
+                                        <td style="color: var(--accent-blue); font-weight: 700;">${p.symbol}</td>
+                                        <td>${parseFloat(p.quantity).toFixed(2)}</td>
+                                        <td>$${parseFloat(p.avg_cost_usd).toFixed(2)}</td>
+                                        <td style="color: var(--accent-emerald);">$${parseFloat(p.market_value_usd).toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                                    </tr>
+                                `).join('')}</tbody>
+                            </table>
+                        </div>`;
+                }
+
+                const recentTxns = (c.transactions || []).slice(-8).reverse();
+                let txnHTML = '';
+                if (recentTxns.length) {
+                    txnHTML = `
+                        <div class="detail-card" style="grid-column: 1 / -1;">
+                            <div class="detail-card-title">💳 Recent Transactions (last 8)</div>
+                            <table class="positions-table">
+                                <thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Amount</th></tr></thead>
+                                <tbody>${recentTxns.map(t => {
+                                    let details = t.symbol || t.description || t.destination || '';
+                                    let amount = '';
+                                    if (t.type === 'deposit') amount = '+$' + parseFloat(t.amount_usd).toLocaleString('en-US', {minimumFractionDigits:2});
+                                    else if (t.type === 'withdrawal') amount = '-$' + parseFloat(t.amount_usd).toLocaleString('en-US', {minimumFractionDigits:2});
+                                    else if (t.type === 'buy') amount = '-$' + parseFloat(t.net_usd).toLocaleString('en-US', {minimumFractionDigits:2});
+                                    else if (t.type === 'sell') amount = '+$' + parseFloat(t.net_usd).toLocaleString('en-US', {minimumFractionDigits:2});
+                                    else if (t.type === 'fee') amount = '-$' + parseFloat(t.amount_usd).toFixed(2);
+                                    else if (t.type === 'dividend') amount = '+$' + parseFloat(t.net_usd).toFixed(2);
+                                    let color = (t.type === 'deposit' || t.type === 'sell' || t.type === 'dividend') ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+                                    let typeColor = {deposit:'var(--accent-emerald)', withdrawal:'var(--accent-rose)', buy:'var(--accent-blue)', sell:'var(--accent-amber)', fee:'var(--text-muted)', dividend:'var(--accent-emerald)'}[t.type] || 'var(--text-secondary)';
+                                    return `<tr>
+                                        <td>${t.date}</td>
+                                        <td style="color: ${typeColor}; text-transform: uppercase; font-weight: 700; font-size: 0.68rem;">${t.type}</td>
+                                        <td>${details}</td>
+                                        <td style="color: ${color}; font-weight: 600;">${amount}</td>
+                                    </tr>`;
+                                }).join('')}</tbody>
+                            </table>
+                        </div>`;
+                }
+
+                panel.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
+                        <div class="client-avatar" style="width:48px; height:48px; font-size: 1rem; background: ${AVATAR_COLORS[allClients.findIndex(x=>x.id===clientId) % AVATAR_COLORS.length]}; color: white;">
+                            ${c.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
+                        </div>
+                        <div>
+                            <h3 style="font-size: 1.1rem; font-weight: 700;">${c.name}</h3>
+                            <span style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted);">${c.id} · ${c.account_opened || '—'}</span>
+                        </div>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="detail-card">
+                            <div class="detail-card-title">🪪 KYC Profile</div>
+                            <div class="detail-row"><span class="detail-key">PAN</span><span class="detail-val">${maskPAN(c.kyc_pan)}</span></div>
+                            <div class="detail-row"><span class="detail-key">Status</span><span class="detail-val" style="color: ${c.kyc_status === 'verified' ? 'var(--accent-emerald)' : 'var(--accent-amber)'};">${c.kyc_status || '—'}</span></div>
+                            <div class="detail-row"><span class="detail-key">Risk Profile</span><span class="detail-val">${c.risk_profile || '—'}</span></div>
+                            <div class="detail-row"><span class="detail-key">DOB</span><span class="detail-val">${c.dob || '—'}</span></div>
+                            <div class="detail-row"><span class="detail-key">Income Band</span><span class="detail-val">${c.income_band || '—'}</span></div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-card-title">🏦 Account Info</div>
+                            <div class="detail-row"><span class="detail-key">Bank</span><span class="detail-val">${c.bank || '—'}</span></div>
+                            <div class="detail-row"><span class="detail-key">Account</span><span class="detail-val">${maskAcct(c.bank_account)}</span></div>
+                            <div class="detail-row"><span class="detail-key">Employer</span><span class="detail-val">${c.employer || '—'}</span></div>
+                            <div class="detail-row"><span class="detail-key">Address</span><span class="detail-val" style="font-family: var(--font-body); font-size: 0.75rem;">${c.address || '—'}</span></div>
+                        </div>
+                        ${positionsHTML}
+                        ${txnHTML}
+                    </div>
+                `;
+            } catch(e) {
+                addLog('err', 'Failed to load client detail: ' + e.message);
+            }
+        }
+
+        /* ========================================
+           LOAD MARKET DATA
+           ======================================== */
+        async function loadMarketData() {
+            try {
+                const res = await fetch('/api/market');
+                allMarketData = await res.json();
+
+                const instruments = allMarketData.instruments || [];
+                const prices = allMarketData.prices || {};
+                const news = allMarketData.news || [];
+
+                document.getElementById('statInstruments').textContent = instruments.length;
+
+                // Render instrument cards
+                const grid = document.getElementById('marketGrid');
+                grid.innerHTML = instruments.map(inst => {
+                    const pArr = prices[inst.symbol] || [];
+                    const latest = pArr.length ? parseFloat(pArr[pArr.length-1].close) : 0;
+                    const prev = pArr.length > 1 ? parseFloat(pArr[pArr.length-2].close) : latest;
+                    const change = prev ? ((latest - prev) / prev * 100) : 0;
+                    const changeClass = change >= 0 ? 'positive' : 'negative';
+                    const changeSign = change >= 0 ? '+' : '';
+
+                    return `
+                        <div class="market-card">
+                            <div class="market-symbol">${inst.symbol}</div>
+                            <div class="market-sector">${inst.sector} · ${inst.listed_on}</div>
+                            <div class="market-price">$${latest.toFixed(2)}</div>
+                            <div class="market-change ${changeClass}">${changeSign}${change.toFixed(2)}% MoM</div>
+                            <div class="sparkline-container"><canvas id="spark-${inst.symbol}"></canvas></div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Draw sparklines
+                instruments.forEach(inst => {
+                    const canvas = document.getElementById('spark-' + inst.symbol);
+                    if (canvas) drawSparkline(canvas, prices[inst.symbol] || []);
+                });
+
+                // Render news (sorted by date desc)
+                const sortedNews = [...news].sort((a,b) => b.date.localeCompare(a.date));
+                const newsGrid = document.getElementById('newsGrid');
+                newsGrid.innerHTML = sortedNews.map(n => `
+                    <div class="news-card">
+                        <div class="news-meta">
+                            <span class="news-symbol-tag">${n.symbol}</span>
+                            <span class="news-date">${n.date}</span>
+                            <span class="news-date" style="opacity:0.5;">· ${n.id}</span>
+                        </div>
+                        <div class="news-headline">${n.headline}</div>
+                        <div class="news-body">${n.body}</div>
+                    </div>
+                `).join('');
+
+                addLog('info', `Loaded ${instruments.length} instruments, ${news.length} news items`);
+            } catch(e) {
+                addLog('err', 'Failed to load market data: ' + e.message);
+            }
+        }
+
+        /* ========================================
+           SPARKLINE DRAWING
+           ======================================== */
+        function drawSparkline(canvas, priceData) {
+            const ctx = canvas.getContext('2d');
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            const w = rect.width;
+            const h = rect.height;
+
+            if (!priceData.length) return;
+
+            const closes = priceData.map(p => parseFloat(p.close));
+            const min = Math.min(...closes);
+            const max = Math.max(...closes);
+            const range = max - min || 1;
+
+            const isUp = closes[closes.length - 1] >= closes[0];
+            const color = isUp ? '#00e676' : '#ff3d71';
+
+            ctx.beginPath();
+            closes.forEach((v, i) => {
+                const x = (i / (closes.length - 1)) * w;
+                const y = h - ((v - min) / range) * (h - 4) - 2;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            // Fill gradient
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+            ctx.closePath();
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, isUp ? 'rgba(0,230,118,0.15)' : 'rgba(255,61,113,0.15)');
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fill();
+        }
+
+        /* ========================================
+           Q&A SUBMISSION
+           ======================================== */
+        function fillQuestion(clientId, question) {
+            document.getElementById('clientSelect').value = clientId;
+            document.getElementById('questionInput').value = question;
+        }
+
+        async function submitQuestion() {
+            const clientId = document.getElementById('clientSelect').value;
+            const prompt = document.getElementById('questionInput').value.trim();
+
+            if (!prompt) {
+                document.getElementById('questionInput').focus();
+                return;
+            }
+
+            const btn = document.getElementById('askBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            questionCounter++;
+            const qid = `q_ui_${questionCounter}`;
+            const payload = {
+                question_id: qid,
+                client_id: clientId || null,
+                prompt: prompt
+            };
+
+            addLog('req', `POST /answer — ${qid} — "${prompt.slice(0, 60)}…"`);
+            const startTime = performance.now();
+
+            try {
+                const res = await fetch('/answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+                const data = await res.json();
+
+                questionsAnswered++;
+                document.getElementById('statQuestions').textContent = questionsAnswered;
+
+                renderResponse(data, elapsed);
+                addLog('res', `${qid} answered in ${elapsed}s — agents: [${(data.agents||[]).join(' → ')}] — confidence: ${data.confidence}`);
+            } catch(e) {
+                addLog('err', `${qid} failed: ${e.message}`);
+                document.getElementById('responsePlaceholder').innerHTML = `
+                    <div class="placeholder-icon">❌</div>
+                    <div class="placeholder-text" style="color: var(--accent-rose);">Request failed: ${e.message}</div>
+                `;
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        /* ========================================
+           RENDER RESPONSE
+           ======================================== */
+        function renderResponse(data, elapsed) {
+            document.getElementById('responsePlaceholder').style.display = 'none';
+            const content = document.getElementById('responseContent');
+            content.classList.add('visible');
+
+            // Status
+            let statusClass = 'answered';
+            let statusText = 'Answered';
+            if (data.refused) { statusClass = 'refused'; statusText = 'Refused'; }
+            else if (data.abstained) { statusClass = 'abstained'; statusText = 'Abstained'; }
+
+            const header = document.getElementById('answerHeader');
+            header.innerHTML = `
+                <span class="answer-status ${statusClass}">${statusText}</span>
+                ${data.reason ? `<span class="reason-badge">Reason: ${data.reason}</span>` : ''}
+                <span class="response-time-badge">⏱ ${elapsed}s</span>
+                <div class="confidence-meter">
+                    <span>Confidence</span>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${(data.confidence||0)*100}%; background: ${data.confidence >= 0.7 ? 'var(--accent-emerald)' : data.confidence >= 0.4 ? 'var(--accent-amber)' : 'var(--accent-rose)'};"></div>
+                    </div>
+                    <span>${((data.confidence||0)*100).toFixed(0)}%</span>
+                </div>
+            `;
+
+            // Answer value
+            const avBox = document.getElementById('answerValueBox');
+            if (data.answer_value) {
+                avBox.innerHTML = `
+                    <div class="answer-value-box">
+                        <div class="answer-value-label">Answer Value</div>
+                        <div class="answer-value-text">${data.answer_value}</div>
+                    </div>
+                `;
+            } else {
+                avBox.innerHTML = '';
+            }
+
+            // Answer text
+            document.getElementById('answerText').textContent = data.answer || data.text || '—';
+
+            // Pipeline
+            const pipeline = document.getElementById('pipelineViz');
+            const agents = data.agents || [];
+            pipeline.innerHTML = agents.map((role, i) => {
+                const color = ROLE_COLORS[role] || '#8b8fad';
+                const icon = ROLE_ICONS[role] || '🤖';
+                return `
+                    ${i > 0 ? '<span class="pipeline-arrow">→</span>' : ''}
+                    <span class="pipeline-node" style="background: ${color}15; color: ${color}; border: 1px solid ${color}30;">
+                        ${icon} ${role}
+                    </span>
+                `;
+            }).join('');
+
+            // Citations
+            const citSection = document.getElementById('citationsSection');
+            if (data.citations && data.citations.length) {
+                citSection.innerHTML = `
+                    <div class="pipeline-label">Citations</div>
+                    ${data.citations.map(c => `<span class="citation-tag">${c}</span>`).join('')}
+                `;
+            } else {
+                citSection.innerHTML = '';
+            }
+
+            // Flags
+            const flagSection = document.getElementById('flagsSection');
+            if (data.flags && data.flags.length) {
+                flagSection.innerHTML = data.flags.map(f =>
+                    `<span class="flag-badge ${f}">${f.replace('_',' ')}</span>`
+                ).join('');
+            } else {
+                flagSection.innerHTML = '';
+            }
+        }
+
+        /* ========================================
+           INIT
+           ======================================== */
+        async function init() {
+            createParticles();
+            addLog('info', 'Dashboard initialized');
+
+            await checkHealth();
+            setInterval(checkHealth, 15000);
+
+            loadAgents();
+            loadClients();
+            loadMarketData();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Allow Enter key to submit
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                const qaTab = document.getElementById('tab-qa');
+                if (qaTab.classList.contains('active')) submitQuestion();
+            }
+        });
+    </script>
+</body>
+</html>
