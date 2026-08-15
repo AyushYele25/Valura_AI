@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: valura-ai-dashboard
+    runtime: docker
+    repo: https://github.com/2CentsCapital-Internship/valura-ai-arena-AyushYele25
+    branch: main
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 7860
+      - key: BOOK_PATH
+        value: client_book.json
+      - key: MARKET_PATH
+        value: market_data.json
