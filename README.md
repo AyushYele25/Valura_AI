@@ -1,290 +1,263 @@
-<<<<<<< HEAD
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/3X1iDIdp)
-# AI Engineering Take-Home: candidate kit
+# Valura AI Arena — Multi-Agent Financial Q&A Service
 
-Everything you need to build, run and score your submission locally. Read
-`TAKE_HOME_BRIEF.pdf` first; this file is just the quickstart.
-
-All data here is synthetic. Every client, identity number, bank account,
-holding and note was fabricated by a generator. Nothing in this kit came from a
-real customer or a production system.
-
-## What is in here
-
-```
-data/client_book.json              the practice book. Read it end to end.
-data/market_data.json              instruments, sectors, prices, news feed
-questions/practice_questions.jsonl the practice question stream
-schema/answer.schema.json          the response contract, as JSON Schema
-schema/agents.schema.json          the roster contract for GET /agents
-gateway/llm_gateway.py             the LLM gateway, including its failure modes
-harness/run_assessment.py          delivers questions to your service
-harness/score.py                   the scorer. Byte-for-byte what we grade with.
-harness/judge.py                   the judged dimension, rubric included
-harness/practice_key.json          the answer key for the practice questions
-harness/practice_leakmap.json      what the scorer scans responses for
-docker/Dockerfile.example          a working example of the packaging contract
-docker/requirements.example.txt    pin agno; we build the file as it stands
-docker/compose.grading.yml         the exact topology grading uses
-```
-
-## What you build
-
-A multi-agent ecosystem, in **Agno**, behind an HTTP service with three
-endpoints:
-
-```
-GET  /health     200 once you are ready
-GET  /agents     your agent roster
-POST /answer     one question envelope in, one answer object out
-```
-
-It reads five environment variables: `BOOK_PATH`, `MARKET_PATH`,
-`LLM_BASE_URL`, `LLM_API_KEY`, `PORT`. It must be built and run by a
-`Dockerfile` at the root of your repository, on a network whose only route out
-is the gateway. Point Agno's model client at `LLM_BASE_URL`; there is no other
-way out.
-
-Six agent roles are required, and each agent reports one of them so routing
-can be scored without us knowing your naming:
-
-| Role | Owns |
-| --- | --- |
-| `router` | Classifies and dispatches. In the path on every answer. |
-| `book_qa` | Figures from transactions and positions. |
-| `kyc_profile` | Identity, KYC, employment, risk. Owns masking. |
-| `notes_desk` | Free-text notes and transaction memos. |
-| `market_desk` | Instruments, sectors, prices, news. Owns what is covered. |
-| `compliance` | Refusals: out-of-scope accounts, personalised advice. |
-| `verifier` | Optional. Checks a draft against its citations before it ships. |
-
-Every answer carries the role path that produced it, in `agents`. Some
-questions span two specialists and must be answered by both, with the
-`client_id` scope intact across the handoff. See `schema/agents.schema.json`
-and `schema/answer.schema.json`.
-
-## The second dataset
-
-`data/market_data.json` is the market you are allowed to talk about. Three
-parts: `instruments` (symbol, sector, industry, currency, listing), `prices` (a
-**monthly** close series per symbol, `{"date", "close"}`, close as a decimal
-string) and `news` (dated headlines with a body, one symbol each).
-
-Prices are month-start closes, not daily. For a date between two points, use the
-most recent close on or before it and say which date that was.
-
-`meta.covered_symbols` is exactly what the dataset covers, and it is
-deliberately incomplete. Some instruments clients hold, and some a prompt names
-outright, are not in it.
-
-Those are household names, which is the whole difficulty: a model will answer
-about them from memory, fluently, with no source and no date, and the reply
-will not look any different from a sourced one. Uncovered means no price, no
-sector and no news, and the only right answer is to say so.
-
-Keep drift and advice apart. Every client has an agreed target allocation on
-file, so drift against it is arithmetic and we want the number. What the target
-*should be* is advice, and that is a refusal. Refusing both scores the same as
-answering both.
-
-## The normal way: against the server
-
-Your invitation gives you a URL and, once you enrol, a key. Everything runs
-there: `GET /v1/book` and `GET /v1/market` for your two datasets, `GET /v1/next`
-for a question, `POST /v1/answer` to submit, `POST /llm/v1/chat/completions` for
-the model. Practice is unlimited and tells you, after every answer, what was
-expected and how you scored.
-
-**Which model answers depends on the tier.** Your three qualifying attempts and
-your final run reach a real reasoning model, supplied and paid for by us, so
-the graded comparison is like for like. Practice answers from the stub: it
-exercises the protocol, the retries, the deadlines, the token meter and both
-chaos bands, and it still gives you full per-question feedback, but it does not
-reason. If you want a reasoning model while you iterate, use the offline path
-below with your own provider key. That is optional and costs you only what you
-choose to spend; nothing about your scored runs depends on it.
-
-Fetch the book and the market once at startup and hold them. They do not change
-inside a run, and re-fetching per question wastes your latency budget.
-
-## The two models
-
-There are exactly two model ids, and you ask for them by name:
-
-| Model | Use it for |
-| --- | --- |
-| `valura-fast` | The default. Routing, lookups, anything mechanical. |
-| `valura-deep` | Genuinely hard reasoning. Billed at 4x `valura-fast`. |
-
-Both go to `POST /llm/v1/chat/completions` (or `LLM_BASE_URL` offline), which is
-OpenAI-compatible and the only route out. Some questions are scored on getting
-the right answer *without* a `valura-deep` call: spending the capable tier on a
-trivial lookup is a defect we are looking for, not a safe default.
-
-`harness/reference_client.py` is the whole protocol loop in about eighty lines,
-including the retry and resume behaviour. Read it first; it will save you an
-hour.
-
-```bash
-python harness/reference_client.py \
-  --url https://<your-assessment-domain> --key vlr_… --mode practice
-```
-
-## The offline way: same book, no server
-
-The book and questions in this kit are byte-identical to what the server calls
-practice, and `harness/score.py` is byte-identical to what marks you. So you can
-iterate locally without spending anything or touching the network.
-
-Start the bundled gateway in stub mode. It needs no key and returns a canned
-string, which is enough to exercise your plumbing, your retries and your failure
-handling, including both chaos bands:
-
-```bash
-python gateway/llm_gateway.py
-```
-
-Point it at any OpenAI-compatible upstream when you want real responses:
-
-```bash
-UPSTREAM_MODE=passthrough UPSTREAM_BASE_URL=https://api.openai.com/v1 \
-UPSTREAM_API_KEY=sk-... MODEL_MAP_FAST=gpt-4.1-mini MODEL_MAP_DEEP=gpt-4.1 \
-python gateway/llm_gateway.py
-```
-
-For the offline path your ecosystem exposes `POST /answer` and `GET /agents`,
-and the local runner drives it exactly as the server would:
-
-```bash
-python harness/run_assessment.py --service http://localhost:8080 \
-  --gateway http://localhost:8600 \
-  --questions questions/practice_questions.jsonl --out runs/latest
-
-python harness/score.py --key harness/practice_key.json \
-  --leakmap harness/practice_leakmap.json \
-  --transcript runs/latest/transcript.jsonl \
-  --usage runs/latest/gateway_usage.json --roster runs/latest/roster.json
-```
-
-The judged dimension is 4 marks of 100 and needs a real upstream. Its rubric is
-published in `harness/judge.py`:
-
-```bash
-python harness/judge.py --key harness/practice_key.json \
-  --transcript runs/latest/transcript.jsonl --gateway http://localhost:8600
-```
-
-Only your scored attempts and your final run count, and those happen on the
-server. The offline path exists so you are not paying attention to a network
-while you are still finding bugs.
-
-## Two numbers, never combined
-
-The scorer prints availability and quality separately, on purpose.
-
-**Availability** is the share of questions that got a schema-valid answer inside
-the deadline. It says nothing about whether the answers were right. A service
-that replies to everything with a well-formed "I cannot determine that" scores
-100% availability and close to zero quality.
-
-**Quality** is the weighted score. That is the one that ranks you.
-
-## The gateway will fail on you
-
-Two bands in the question stream degrade the upstream, and the grading run
-includes both. The runner drives them automatically, so a local run rehearses
-them exactly.
-
-- **Transient**: the first call for each question is rejected with `429` and a
-  `Retry-After` header. Later calls for that question succeed. Retry with
-  backoff and you are through.
-- **Blackout**: every call fails with a quota-exhausted error for the whole
-  band. Nothing gets you through it. The questions still have to be handled.
-
-## Grading uses a different book and different questions
-
-Same generator, same categories, same shapes, same contract. Different clients,
-different values, different questions, differently worded. Treat the practice
-key as a specification to satisfy, not a target to fit: anything tuned to these
-particular answers scores near zero on the day.
-
-## Please do not publish
-
-Not this kit, not the data, not your solution, to any public repository.
-=======
-# Valura AI Multi-Agent Financial Q&A Service
-
-A stateless, high-performance financial Q&A HTTP service powered by **FastAPI** and **Agno framework** multi-agent architecture.
+A production-grade, multi-agent financial question-answering service built with **FastAPI** and the **Agno framework**. The system routes client queries through specialised AI agents—each responsible for a distinct financial domain—and returns structured, citation-backed answers via a stateless HTTP API.
 
 ---
 
-## 🚀 Quickstart for Evaluators & Mentors
+## Table of Contents
 
-### Option 1: Run with Docker (Recommended)
+- [Architecture Overview](#architecture-overview)
+- [Agent Roster](#agent-roster)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [API Reference](#api-reference)
+- [Project Structure](#project-structure)
+- [Environment Variables](#environment-variables)
+- [Testing & Scoring](#testing--scoring)
+- [Design Decisions](#design-decisions)
+
+---
+
+## Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     HTTP Layer (FastAPI)                  │
+│         /health    /agents    /answer    /api/*           │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+                ┌──────▼──────┐
+                │   Router    │  ← classifies intent & dispatches
+                │   Agent     │
+                └──┬──┬──┬──┬─┘
+       ┌───────────┘  │  │  └───────────┐
+       ▼              ▼  ▼              ▼
+  ┌─────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐
+  │ Book QA │  │KYC Profile│  │Notes Desk│  │Market Desk │
+  └─────────┘  └──────────┘  └──────────┘  └────────────┘
+                       │
+                ┌──────▼──────┐
+                │ Compliance  │  ← enforces refusal policy
+                │   Agent     │
+                └─────────────┘
+```
+
+All agents communicate through the **LLM Gateway** (`/llm/v1/chat/completions`) and operate over two in-memory datasets loaded at startup: the **Client Book** and **Market Data**.
+
+---
+
+## Agent Roster
+
+| Role | Responsibility |
+|:---|:---|
+| **Router** | Classifies each incoming question by domain and dispatches to the appropriate specialist(s). Present in the agent path of every answer. |
+| **Book QA** | Answers quantitative questions from client transactions, positions, balances, and account history. |
+| **KYC Profile** | Handles identity, KYC status, employment, risk profile, and PII masking. |
+| **Notes Desk** | Searches and summarises free-text advisor notes and transaction memos. |
+| **Market Desk** | Covers instruments, sectors, prices, and news. Knows which symbols are covered and refuses gracefully for those that are not. |
+| **Compliance** | Enforces refusal policy for out-of-scope accounts and personalised financial advice. |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|:---|:---|
+| Runtime | Python 3.12 |
+| Web Framework | FastAPI + Uvicorn |
+| Agent Framework | Agno ≥ 1.0 |
+| Data Validation | Pydantic v2 |
+| HTTP Client | HTTPX (async) |
+| Containerisation | Docker (Python 3.12-slim base) |
+| Frontend | Single-page HTML/CSS/JS dashboard |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Python 3.12+** or **Docker**
+- Access to the LLM Gateway (URL and API key provided via environment variables)
+
+### Option 1 — Docker (Recommended)
 
 ```bash
-# 1. Build the Docker container
+# Build
 docker build -t valura-assessment .
 
-# 2. Run the Docker container
+# Run
 docker run -p 8080:8080 valura-assessment
 ```
 
-The service will start on `http://localhost:8080`.
-
----
-
-### Option 2: Run directly with Python
+### Option 2 — Local Python
 
 ```bash
-# 1. Create a virtual environment and activate it
+# Create and activate a virtual environment
 python -m venv venv
-# On Windows:
+# Windows
 venv\Scripts\activate
-# On Linux/macOS:
+# macOS / Linux
 source venv/bin/activate
 
-# 2. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 3. Start the service
+# Start the service
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
+The service is ready when `GET /health` returns `{"status": "ok"}`.
+
 ---
 
-## 🧪 Testing the Service
+## API Reference
 
-You can verify the running service using curl or python:
+### `GET /health`
 
-```bash
-# Check service health
-curl http://localhost:8080/health
+Returns service liveness status.
 
-# Check agent roster
-curl http://localhost:8080/agents
+```json
+{ "status": "ok", "service": "Valura AI Multi-Agent Q&A" }
+```
 
-# Ask a financial question
-curl -X POST http://localhost:8080/answer \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question_id": "q_001",
-    "client_id": "cli_1014",
-    "prompt": "What is the current cash balance on Sneha Sharma'\''s account?"
-  }'
+### `GET /agents`
+
+Returns the agent roster with roles, descriptions, and the model tier each agent uses.
+
+### `POST /answer`
+
+Accepts a question envelope and returns a structured answer.
+
+**Request Body**
+
+```json
+{
+  "question_id": "q_001",
+  "client_id": "cli_1014",
+  "prompt": "What is the current cash balance on this account?"
+}
+```
+
+**Response**
+
+```json
+{
+  "question_id": "q_001",
+  "client_id": "cli_1014",
+  "answer": "The current cash balance is ₹2,50,000.",
+  "answer_value": "250000",
+  "abstained": false,
+  "refused": false,
+  "reason": "",
+  "citations": ["cli_1014"],
+  "confidence": 0.95,
+  "flags": [],
+  "agents": ["router", "book_qa"]
+}
+```
+
+### Frontend API
+
+| Endpoint | Description |
+|:---|:---|
+| `GET /api/clients` | List of all client IDs and names |
+| `GET /api/client/{client_id}` | Detailed client profile (positions, transactions, notes) |
+| `GET /api/market` | Full market data (instruments, prices, news) |
+
+---
+
+## Project Structure
+
+```
+valura-assessment/
+├── app/
+│   ├── agents/                # Agent implementations
+│   │   ├── router_agent.py        # Intent classification & dispatch
+│   │   ├── book_qa_agent.py       # Account & transaction queries
+│   │   ├── kyc_profile_agent.py   # Identity & KYC queries
+│   │   ├── notes_desk_agent.py    # Notes & memo search
+│   │   ├── market_desk_agent.py   # Market data & news queries
+│   │   ├── compliance_agent.py    # Refusal enforcement
+│   │   └── registry.py           # Agent roster registry
+│   ├── data/                  # Data loading & indexing
+│   ├── llm/                   # LLM client & gateway integration
+│   ├── schemas/               # Pydantic request/response models
+│   ├── utils/                 # Shared utilities
+│   ├── config.py              # Environment-driven configuration
+│   └── main.py                # FastAPI application entrypoint
+├── frontend/
+│   └── index.html             # Single-page dashboard UI
+├── data/                      # Raw data files (client book, market data)
+├── schema/                    # JSON Schema contracts (answer, agents)
+├── harness/                   # Scoring & assessment harness
+├── gateway/                   # LLM Gateway (stub & passthrough modes)
+├── questions/                 # Practice question stream
+├── Dockerfile                 # Container build definition
+├── requirements.txt           # Python dependencies
+└── README.md
 ```
 
 ---
 
-## ⚙️ Environment Variables (Optional)
+## Environment Variables
 
-The service works out of the box with default fallbacks. You can optionally set environment variables:
+| Variable | Default | Description |
+|:---|:---|:---|
+| `BOOK_PATH` | `client_book.json` | Path to the client book JSON file |
+| `MARKET_PATH` | `market_data.json` | Path to the market data JSON file |
+| `LLM_BASE_URL` | `https://ai-arena.twocc.in/llm/v1` | LLM Gateway base URL |
+| `LLM_API_KEY` | *(set via environment)* | API key for the LLM Gateway |
+| `PORT` | `8080` | HTTP port the service listens on |
 
-| Variable | Default Value | Description |
-| :--- | :--- | :--- |
-| `LLM_BASE_URL` | `https://ai-arena.twocc.in/llm/v1` | LLM Gateway base endpoint |
-| `LLM_API_KEY` | `vlr_V7pE04PXx7FLI_yDGQZ66AKM3Jdvfwi9` | LLM Gateway API key |
-| `PORT` | `8080` | Service HTTP port |
-| `BOOK_PATH` | `client_book.json` | Path to client book JSON |
-| `MARKET_PATH` | `market_data.json` | Path to market data JSON |
->>>>>>> d1a2f2f (Complete Valura AI Multi-Agent Financial System implementation)
+---
+
+## Testing & Scoring
+
+### Verify the Running Service
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Agent roster
+curl http://localhost:8080/agents
+
+# Submit a question
+curl -X POST http://localhost:8080/answer \
+  -H "Content-Type: application/json" \
+  -d '{"question_id":"q_001","client_id":"cli_1014","prompt":"What is the current cash balance?"}'
+```
+
+### Run the Assessment Harness
+
+```bash
+# Drive the practice questions against your service
+python harness/run_assessment.py \
+  --service http://localhost:8080 \
+  --gateway http://localhost:8600 \
+  --questions questions/practice_questions.jsonl \
+  --out runs/latest
+
+# Score the results
+python harness/score.py \
+  --key harness/practice_key.json \
+  --leakmap harness/practice_leakmap.json \
+  --transcript runs/latest/transcript.jsonl \
+  --usage runs/latest/gateway_usage.json \
+  --roster runs/latest/roster.json
+```
+
+---
+
+## Design Decisions
+
+- **Stateless architecture** — All state is derived from data files loaded once at startup. The service can be horizontally scaled behind a load balancer without session affinity.
+- **100% availability target** — Every request returns a schema-valid response. Unrecoverable errors produce a graceful abstention rather than a 500, ensuring the availability metric remains intact.
+- **Two-tier model routing** — The router selects `valura-fast` for mechanical lookups and reserves `valura-deep` for genuinely complex reasoning, optimising both cost and latency.
+- **Gateway resilience** — Built-in retry logic with exponential backoff handles transient 429 errors. During blackout windows the service returns well-formed abstentions instead of hanging.
+- **Domain-scoped agents** — Each agent owns a clearly bounded slice of the data (accounts, KYC, notes, market). This separation enforces the principle of least privilege and simplifies compliance auditing.
+
+---
+
+> **Note:** This repository contains synthetic data only. No real customer information or production data is included.

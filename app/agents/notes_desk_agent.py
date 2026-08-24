@@ -52,7 +52,10 @@ class NotesDeskAgent:
         ]
 
         text_ans = await llm_client.chat_completion(messages, model="valura-fast")
-        if not text_ans:
+        if text_ans == "__UPSTREAM_ISSUE__":
+            note_summary = " | ".join([f"[{n.get('date')}] {n.get('text')}" for n in notes])
+            text_ans = f"Notes for {client.get('name')}: {note_summary} [UPSTREAM_ISSUE]"
+        elif not text_ans:
             note_summary = " | ".join([f"[{n.get('date')}] {n.get('text')}" for n in notes])
             text_ans = f"Notes for {client.get('name')}: {note_summary}"
 

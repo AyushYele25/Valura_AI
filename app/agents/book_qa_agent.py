@@ -185,6 +185,8 @@ class BookQAAgent:
         ]
 
         text_ans = await llm_client.chat_completion(messages, model="valura-fast")
+        if text_ans == "__UPSTREAM_ISSUE__":
+            return None, "Processed book QA query. [UPSTREAM_ISSUE]", [client_id]
         return None, text_ans or "Processed book QA query.", [client_id]
 
 book_qa_agent = BookQAAgent()

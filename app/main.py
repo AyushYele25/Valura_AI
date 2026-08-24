@@ -70,6 +70,7 @@ async def answer_question(envelope: QuestionEnvelope):
             reason="service_error",
             citations=[envelope.client_id] if envelope.client_id else [],
             confidence=0.5,
+            flags=["upstream_issue"],
             agents=["router"]
         )
 

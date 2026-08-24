@@ -74,7 +74,8 @@ class MarketDeskAgent:
                     text = f"Percentage return for {ret_sym} between {parsed_dates[0]} and {parsed_dates[-1]}: {ret_val}%."
                     return ret_val, text, [ret_sym]
 
-        if target_date > "2026-07-01":
+        market_as_of = market_index.meta.get("as_of", "2026-07-31")
+        if target_date > market_as_of:
             return None, f"No market price data available for date {target_date}.", []
 
         price_results = []
@@ -117,7 +118,10 @@ class MarketDeskAgent:
         ]
 
         text_ans = await llm_client.chat_completion(messages, model="valura-fast")
-        if not text_ans:
+        if text_ans == "__UPSTREAM_ISSUE__":
+            lines = [f"{p['symbol']} close on or before {p['target_date']} was USD {p['close']} (as of {p['as_of_date']})." for p in price_results]
+            text_ans = ("\n".join(lines) if lines else "Processed market query.") + " [UPSTREAM_ISSUE]"
+        elif not text_ans:
             lines = [f"{p['symbol']} close on or before {p['target_date']} was USD {p['close']} (as of {p['as_of_date']})." for p in price_results]
             text_ans = "\n".join(lines) if lines else "Processed market query."
 

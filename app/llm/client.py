@@ -48,7 +48,7 @@ class LLMClient:
                         body = response.text.lower()
                         if "quota" in body or "exhausted" in body or "blackout" in body:
                             logger.warning(f"Blackout band detected: {body}")
-                            return None  # Quota exhausted blackout: retry won't succeed
+                            return "__UPSTREAM_ISSUE__"  # Sentinel: quota exhausted blackout
 
                         retry_after = response.headers.get("Retry-After")
                         wait_seconds = float(retry_after) if retry_after else (2.0 ** attempt)

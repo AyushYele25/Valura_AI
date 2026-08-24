@@ -18,4 +18,5 @@ class AnswerResponse(BaseModel):
     reason: Optional[str] = None        # Refusal reason or null
     citations: List[str] = Field(default_factory=list)  # List of citation strings
     confidence: float = 1.0             # Float between 0.0 and 1.0
+    flags: List[str] = Field(default_factory=list)      # Allowed: conflict, upstream_issue, stale_data
     agents: List[str] = Field(default_factory=list)     # List of role strings

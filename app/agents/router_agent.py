@@ -74,6 +74,24 @@ class RouterAgent:
                 agents=agent_roles
             )
 
+        # 2b. Unsourced instrument check (abstain, not refuse)
+        if symbols and not any(kw in prompt_lower for kw in ["hold", "share", "position", "cash", "balance", "transaction", "deposit", "dividend", "drift", "allocation", "fee", "bought", "purchase", "sell", "disposal"]):
+            uncovered = [s for s in symbols if s not in market_index.covered_symbols]
+            if uncovered:
+                agent_roles.append("market_desk")
+                return AnswerResponse(
+                    question_id=qid,
+                    client_id=cid,
+                    answer=f"The symbol '{uncovered[0]}' is not covered in our market data.",
+                    answer_value=None,
+                    abstained=True,
+                    refused=False,
+                    reason="unsourced_instrument",
+                    citations=[],
+                    confidence=1.0,
+                    agents=agent_roles
+                )
+
         # 3. Routing Classification
         target_roles = []
 
@@ -100,6 +118,7 @@ class RouterAgent:
         primary_ans_val = None
         is_abstained = False
         is_conflict = False
+        has_upstream_issue = False
 
         for role in target_roles:
             agent_roles.append(role)
@@ -113,6 +132,11 @@ class RouterAgent:
                 ans_val, text_ans, cits = await book_qa_agent.process(prompt, cid)
             else:
                 continue
+
+            # Detect upstream issue marker from agents
+            if "[UPSTREAM_ISSUE]" in text_ans:
+                has_upstream_issue = True
+                text_ans = text_ans.replace(" [UPSTREAM_ISSUE]", "").replace("[UPSTREAM_ISSUE]", "")
 
             if ans_val is None and "conflict" in text_ans.lower():
                 is_conflict = True
@@ -129,6 +153,10 @@ class RouterAgent:
                 if isinstance(c, str) and c not in citations:
                     citations.append(c)
 
+        response_flags = []
+        if has_upstream_issue:
+            response_flags.append("upstream_issue")
+
         if is_conflict:
             return AnswerResponse(
                 question_id=qid,
@@ -140,6 +168,7 @@ class RouterAgent:
                 reason="conflict",
                 citations=citations,
                 confidence=1.0,
+                flags=["conflict"] + ([f for f in response_flags if f != "conflict"]),
                 agents=agent_roles
             )
 
@@ -156,6 +185,7 @@ class RouterAgent:
                 reason="unanswerable",
                 citations=[],
                 confidence=1.0,
+                flags=response_flags,
                 agents=agent_roles
             )
 
@@ -169,6 +199,7 @@ class RouterAgent:
             reason=None,
             citations=citations if citations else ([cid] if cid else []),
             confidence=1.0,
+            flags=response_flags,
             agents=agent_roles
         )
 

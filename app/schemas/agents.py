@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 class AgentInfo(BaseModel):
     name: str
@@ -7,4 +7,6 @@ class AgentInfo(BaseModel):
     description: str
 
 class AgentRosterResponse(BaseModel):
+    framework: str = "agno"
+    framework_version: Optional[str] = None
     agents: List[AgentInfo]

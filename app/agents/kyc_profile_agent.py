@@ -44,7 +44,8 @@ class KYCProfileAgent:
 
         # Employer query
         if "employer" in prompt_lower or "work" in prompt_lower or "employed" in prompt_lower or "company" in prompt_lower:
-            emp = raw_kyc.get("employer") or raw_kyc.get("company")
+            employment = raw_kyc.get("employment", {})
+            emp = employment.get("employer") or employment.get("company") or raw_kyc.get("employer") or raw_kyc.get("company")
             if emp:
                 ans_val = str(emp)
             else:
@@ -95,7 +96,9 @@ class KYCProfileAgent:
         ]
 
         text_ans = await llm_client.chat_completion(messages, model="valura-fast")
-        if not text_ans:
+        if text_ans == "__UPSTREAM_ISSUE__":
+            text_ans = f"KYC information for {client.get('name')}: Status is '{masked_kyc.get('kyc_status')}'. [UPSTREAM_ISSUE]"
+        elif not text_ans:
             text_ans = f"KYC information for {client.get('name')}: Status is '{masked_kyc.get('kyc_status')}'."
 
         return ans_val, text_ans, citations
