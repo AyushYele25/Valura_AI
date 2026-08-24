@@ -2,7 +2,7 @@ services:
   - type: web
     name: valura-ai-dashboard
     runtime: docker
-    repo: https://github.com/2CentsCapital-Internship/valura-ai-arena-AyushYele25
+    repo: https://github.com/AyushYele25/Valura_AI.git
     branch: main
     plan: free
     dockerfilePath: ./Dockerfile
