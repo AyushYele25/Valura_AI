@@ -50,6 +50,41 @@ class RouterAgent:
                 agents=agent_roles
             )
 
+        # 1b. Out-of-scope general-knowledge detection
+        financial_keywords = [
+            "cash", "balance", "position", "holding", "portfolio", "transaction",
+            "deposit", "fee", "drift", "allocation", "quantity", "share", "shares",
+            "bought", "sold", "dividend", "price", "sector", "industry", "news",
+            "headline", "stock", "close", "kyc", "pan", "dob", "birth",
+            "income", "bank", "ifsc", "address", "risk", "employment", "employer",
+            "note", "memo", "advisor", "review", "interaction", "discussion",
+            "account", "client", "market", "instrument", "symbol", "trade",
+            "buy", "sell", "invest", "rebalance", "weight", "mandate",
+            "funding", "withdrawal", "settle", "settlement", "purchase",
+            "disposal", "suitability", "compliance", "broker", "demat",
+            "overweight", "underweight", "concentrated", "proportion",
+            "how many", "how much", "total", "largest", "biggest", "first",
+            "latest", "recent", "current", "open", "days"
+        ]
+        has_financial_context = any(kw in prompt_lower for kw in financial_keywords)
+        has_client_ref = bool(cid) or bool(re.search(r'\bcli_\d{4}\b', prompt))
+        has_symbol_ref = bool(symbols)
+
+        if not has_financial_context and not has_client_ref and not has_symbol_ref:
+            agent_roles.append("compliance")
+            return AnswerResponse(
+                question_id=qid,
+                client_id=cid,
+                answer="This question is outside the scope of our financial advisory service. I can only answer questions about client accounts, positions, transactions, KYC profiles, and covered market instruments.",
+                answer_value=None,
+                abstained=False,
+                refused=True,
+                reason="out_of_scope_topic",
+                citations=[],
+                confidence=1.0,
+                agents=agent_roles
+            )
+
         # 2. Compliance Refusal Check
         is_refusal, reason_text, cat = compliance_agent.check_refusal(
             prompt=prompt,
@@ -95,10 +130,10 @@ class RouterAgent:
         # 3. Routing Classification
         target_roles = []
 
-        is_kyc = any(kw in prompt_lower for kw in ["kyc", "pan", "dob", "birth", "annual income", "income band", "bank account", "ifsc", "address", "risk profile", "employment", "employer", "identity"])
-        is_notes = any(kw in prompt_lower for kw in ["note", "memo", "advisor", "review call", "interaction", "discussion"])
-        is_market = any(kw in prompt_lower for kw in ["price", "sector", "industry", "news", "headline", "stock", "close"])
-        is_book = any(kw in prompt_lower for kw in ["cash", "balance", "position", "holding", "portfolio", "transaction", "deposit", "fee", "drift", "allocation", "quantity", "many", "how much", "share", "bought", "first bought", "dividend"])
+        is_kyc = any(kw in prompt_lower for kw in ["kyc", "pan", "dob", "birth", "annual income", "income band", "bank account", "ifsc", "address", "risk profile", "employment", "employer", "identity", "occupation", "demat", "broker", "suitability"])
+        is_notes = any(kw in prompt_lower for kw in ["note", "memo", "advisor", "review call", "interaction", "discussion", "comment", "remark", "observation"])
+        is_market = any(kw in prompt_lower for kw in ["price", "sector", "industry", "news", "headline", "stock", "close", "listed", "exchange", "instrument", "currency", "market cap"])
+        is_book = any(kw in prompt_lower for kw in ["cash", "balance", "position", "holding", "portfolio", "transaction", "deposit", "fee", "drift", "allocation", "quantity", "many", "how much", "share", "bought", "first bought", "dividend", "withdrawal", "funding", "settle", "disposal", "sell", "sold", "purchase", "trade", "total", "sum", "count", "open", "account age"])
 
         if is_notes:
             target_roles.append("notes_desk")
